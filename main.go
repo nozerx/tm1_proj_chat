@@ -20,5 +20,7 @@ func main() {
 		panic(err)
 	}
 	fmt.Print(chagrp)
+	ui := src.NewUI(chagrp)
+	ui.Run()
 
 }
