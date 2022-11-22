@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
@@ -90,6 +91,30 @@ func creatNode(ctx context.Context) (host.Host, *dht.IpfsDHT) {
 	fmt.Println("Successfully created a new node")
 	return libhost, kdht
 
+}
+
+func (p2p *p2pHost) AdvertiseConnect() {
+	tt1, err := p2p.Discovery.Advertise(p2p.ctx, "rezonchat")
+	if err != nil {
+		fmt.Println("Error while advertising the availability")
+		panic(err)
+	}
+	time.Sleep(5 * time.Second)
+	peerChannel, err := p2p.Discovery.FindPeers(p2p.ctx, "rezonchat")
+	if err != nil {
+		fmt.Println("Error while finding service peers")
+	}
+	fmt.Println("Service time to live is", tt1)
+	go handlePeerDiscovery(p2p.Host, peerChannel)
+}
+
+func handlePeerDiscovery(nodehost host.Host, peerchan <-chan peer.AddrInfo) {
+	for peer := range peerchan {
+		if peer.ID == nodehost.ID() {
+			continue
+		}
+		nodehost.Connect(context.Background(), peer)
+	}
 }
 
 func setupKadDHT(ctx context.Context, nodehost host.Host) *dht.IpfsDHT {

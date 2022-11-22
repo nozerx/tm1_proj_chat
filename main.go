@@ -11,4 +11,8 @@ func main() {
 	p2pHost := src.EstablishP2P()
 	fmt.Println(len(p2pHost.Host.Network().Peers()))
 	fmt.Println(p2pHost.Host.Network().Peers())
+	p2pHost.AdvertiseConnect()
+	fmt.Println(len(p2pHost.Host.Network().Peers()))
+	// fmt.Println(p2pHost.Host.Network().Peers())
+
 }
