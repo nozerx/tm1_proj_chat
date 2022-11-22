@@ -12,6 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/routing"
 	discovery "github.com/libp2p/go-libp2p-discovery"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -27,6 +28,7 @@ type p2pHost struct {
 	Host      host.Host
 	KaDHT     *dht.IpfsDHT
 	Discovery *discovery.RoutingDiscovery
+	PubSub    *pubsub.PubSub
 }
 
 func EstablishP2P() *p2pHost {
@@ -34,11 +36,13 @@ func EstablishP2P() *p2pHost {
 	nodehost, kdht := creatNode(ctx)
 	bootsrapDHT(ctx, nodehost, kdht)
 	routingDiscovery := discovery.NewRoutingDiscovery(kdht)
+	pubsubhand := setUpPubSub(ctx, nodehost, routingDiscovery)
 	return &p2pHost{
 		ctx:       ctx,
 		Host:      nodehost,
 		KaDHT:     kdht,
 		Discovery: routingDiscovery,
+		PubSub:    pubsubhand,
 	}
 }
 
@@ -156,4 +160,13 @@ func bootsrapDHT(ctx context.Context, nodehost host.Host, kdht *dht.IpfsDHT) {
 	wg.Wait()
 	fmt.Println("Connected to ", connectedBootpeers, "of ", totalbootpeers)
 
+}
+
+func setUpPubSub(ctx context.Context, nodehost host.Host, routingDiscovery *discovery.RoutingDiscovery) *pubsub.PubSub {
+	pubsubHandler, err := pubsub.NewGossipSub(ctx, nodehost, pubsub.WithDiscovery(routingDiscovery))
+	if err != nil {
+		fmt.Println("Error while creating a pubsub service")
+		panic(err)
+	}
+	return pubsubHandler
 }

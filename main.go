@@ -14,5 +14,11 @@ func main() {
 	p2pHost.AdvertiseConnect()
 	fmt.Println(len(p2pHost.Host.Network().Peers()))
 	// fmt.Println(p2pHost.Host.Network().Peers())
+	chagrp, err := src.JoinGroup(p2pHost)
+	if err != nil {
+		fmt.Println("Error while creating a group")
+		panic(err)
+	}
+	fmt.Print(chagrp)
 
 }
