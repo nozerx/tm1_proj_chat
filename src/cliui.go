@@ -12,6 +12,7 @@ type UI struct {
 	*Group
 	app        *tview.Application
 	MsgInputs  chan string
+	peerbox    *tview.TextView
 	messagebox *tview.TextView
 	inputbox   *tview.InputField
 }
@@ -35,13 +36,17 @@ func NewUI(gr *Group) *UI {
 		input.SetText("")
 	})
 
-	flex := tview.NewFlex().SetDirection(tview.FlexColumn).AddItem(messagebox, 0, 1, false).AddItem(input, 0, 1, true)
+	peerbox := tview.NewTextView()
+	peerbox.SetBorder(true).SetBorderColor(tcell.ColorRed).SetTitle("Peers").SetTitleAlign(tview.AlignLeft).SetTitleColor(tcell.ColorWhite)
+
+	flex := tview.NewFlex().SetDirection(tview.FlexColumn).AddItem(messagebox, 0, 1, false).AddItem(peerbox, 0, 1, false).AddItem(input, 0, 1, true)
 	app.SetRoot(flex, true)
 	return &UI{
 		Group:      gr,
 		app:        app,
 		messagebox: messagebox,
 		inputbox:   input,
+		peerbox:    peerbox,
 		MsgInputs:  msgchan,
 	}
 }
@@ -76,6 +81,10 @@ func (ui *UI) starteventhandler() {
 			// Print the recieved messages to the message box
 			ui.display_chatmessage(msg)
 
+		case <-refreshticker.C:
+			// Refresh the list of peers in the chat room periodically
+			ui.syncpeerbox()
+
 		case <-ui.pscntx.Done():
 			// End the event loop
 			return
@@ -93,4 +102,29 @@ func (ui *UI) display_chatmessage(msg chatmessage) {
 func (ui *UI) display_selfmessage(msg string) {
 	prompt := fmt.Sprintf("[blue]<%s>:[-]", ui.UserName)
 	fmt.Fprintf(ui.messagebox, "%s %s\n", prompt, msg)
+}
+func (ui *UI) syncpeerbox() {
+	// Retrieve the list of peers from the chatroom
+
+	peers := ui.PeerList()
+	// Clear() is not a threadsafe call
+	// So we acquire the thread lock on it
+	// ui.peerbox.Lock()
+
+	// Clear the box
+	ui.peerbox.Clear()
+	// Release the lock
+	// ui.peerbox.Unlock()
+	// Iterate over the list of peers
+	for _, p := range peers {
+		// Generate the pretty version of the peer ID
+		peerid := p.Pretty()
+		// Shorten the peer ID
+		peerid = peerid[len(peerid)-8:]
+		// Add the peer ID to the peer box
+		fmt.Fprintln(ui.peerbox, peerid)
+	}
+
+	// Refresh the UI
+	ui.app.Draw()
 }
