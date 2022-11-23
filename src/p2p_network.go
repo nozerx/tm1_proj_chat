@@ -23,6 +23,8 @@ import (
 	"github.com/multiformats/go-multiaddr"
 )
 
+const service = "rex/chat"
+
 type p2pHost struct {
 	ctx       context.Context
 	Host      host.Host
@@ -49,62 +51,62 @@ func EstablishP2P() *p2pHost {
 func creatNode(ctx context.Context) (host.Host, *dht.IpfsDHT) {
 	prvkey, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, rand.Reader)
 	if err != nil {
-		fmt.Println("Error while generating the private key")
+		fmt.Fprintln(File, "Error while generating the private key")
 		panic(err)
 	}
-	fmt.Println("Successfully created a private key")
+	fmt.Fprintln(File, "Successfully created a private key")
 	identity := libp2p.Identity(prvkey)
 	tlstransport, err := tls.New(prvkey)
 	if err != nil {
-		fmt.Println("Error while creating a TLS transport")
+		fmt.Fprintln(File, "Error while creating a TLS transport")
 		panic(err)
 	}
-	fmt.Println("Successfully created a TLS transport")
+	fmt.Fprintln(File, "Successfully created a TLS transport")
 	security := libp2p.Security(tls.ID, tlstransport)
 	transport := libp2p.Transport(tcp.NewTCPTransport)
 	muladdr, err := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/0")
 	listen := libp2p.ListenAddrs(muladdr)
 	if err != nil {
-		fmt.Println("Error while creating the new multiaddr")
+		fmt.Fprintln(File, "Error while creating the new multiaddr")
 		panic(err)
 	}
-	fmt.Println("Successfully created a multiaddrs")
+	fmt.Fprintln(File, "Successfully created a multiaddrs")
 	muxer := libp2p.Muxer("/yamux/1.0.0", yamux.DefaultTransport)
 	connMgr, err := connmgr.NewConnManager(100, 400)
 	conn := libp2p.ConnectionManager(connMgr)
 	nat := libp2p.NATPortMap()
-	fmt.Println("Everything good till here")
+	fmt.Fprintln(File, "Everything good till here")
 	relay := libp2p.EnableAutoRelay(autorelay.WithDefaultStaticRelays())
 	fmt.Println("Everything works after relay enabled")
 	var kdht *dht.IpfsDHT
 	routing := libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
-		fmt.Println("Inside routing function")
+		fmt.Fprintln(File, "Inside routing function")
 		kdht = setupKadDHT(ctx, h)
-		fmt.Println("Successfully setup kdht")
+		fmt.Fprintln(File, "Successfully setup kdht")
 		return kdht, err
 	})
-	fmt.Println("Routing successfull")
+	fmt.Fprintln(File, "Routing successfull")
 	fmt.Println(relay)
 	opts := libp2p.ChainOptions(identity, listen, security, transport, muxer, conn, nat, routing, relay)
 	fmt.Println("Successfully setup chain options")
 	libhost, err := libp2p.New(opts)
 	if err != nil {
-		fmt.Println("Erro while creating a new node")
+		fmt.Fprintln(File, "Error while creating a new node")
 		panic(err)
 	}
-	fmt.Println("Successfully created a new node")
+	fmt.Fprintln(File, "Successfully created a new node")
 	return libhost, kdht
 
 }
 
 func (p2p *p2pHost) AdvertiseConnect() {
-	tt1, err := p2p.Discovery.Advertise(p2p.ctx, "rezonchat")
+	tt1, err := p2p.Discovery.Advertise(p2p.ctx, service)
 	if err != nil {
 		fmt.Println("Error while advertising the availability")
 		panic(err)
 	}
 	time.Sleep(5 * time.Second)
-	peerChannel, err := p2p.Discovery.FindPeers(p2p.ctx, "rezonchat")
+	peerChannel, err := p2p.Discovery.FindPeers(p2p.ctx, service)
 	if err != nil {
 		fmt.Println("Error while finding service peers")
 	}
@@ -169,4 +171,8 @@ func setUpPubSub(ctx context.Context, nodehost host.Host, routingDiscovery *disc
 		panic(err)
 	}
 	return pubsubHandler
+}
+
+func (gr *Group) PeerList() []peer.ID {
+	return gr.pstopic.ListPeers()
 }

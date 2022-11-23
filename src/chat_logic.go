@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -28,17 +29,20 @@ type Group struct {
 	selfid    peer.ID
 }
 
-func JoinGroup(p2phost *p2pHost) (*Group, error) {
-	topic, err := p2phost.PubSub.Join("ChatGroup")
+var File, _ = os.Create("logfile.txt")
+
+func JoinGroup(p2phost *p2pHost, topicName string) (*Group, error) {
+	topic, err := p2phost.PubSub.Join(topicName)
 	if err != nil {
-		fmt.Println("Error while join the chat")
+		fmt.Fprintln(File, "Error while join the chat")
 		return nil, err
 	}
 	sub, err := topic.Subscribe()
 	if err != nil {
-		fmt.Println("Error while subscribing", sub)
+		fmt.Fprintln(File, "Error while subscribing", sub)
 		return nil, err
 	}
+	fmt.Fprintln(File, "Successfully subscribed to ", topic.String())
 	username := "user1"
 	groupname := "Group1"
 	pubsubctx, cancel := context.WithCancel(context.Background())
@@ -73,14 +77,15 @@ func (gr *Group) PubLoop() {
 			}
 			messagebyte, err := json.Marshal(m)
 			if err != nil {
-				fmt.Println("Error in marshaling")
+				fmt.Fprintln(File, "Error in marshaling")
 				continue
 			}
 			err = gr.pstopic.Publish(gr.pscntx, messagebyte)
 			if err != nil {
-				fmt.Println("Error in publishing the message")
+				fmt.Fprintln(File, "Error in publishing the message")
 				continue
 			}
+			fmt.Fprintln(File, "Successfully published the message")
 
 		}
 	}
@@ -95,9 +100,10 @@ func (gr *Group) SubLoop() {
 			message, err := gr.psub.Next(gr.pscntx)
 			if err != nil {
 				close(gr.Inbound)
-				fmt.Println("Error while trying to read a message from a subscription")
+				fmt.Fprintln(File, "Error while trying to read a message from a subscription")
 				return
 			}
+			fmt.Fprintln(File, "Successfully read message from a subscription")
 
 			if message.ReceivedFrom == gr.selfid {
 				continue
@@ -105,10 +111,12 @@ func (gr *Group) SubLoop() {
 			cm := &chatmessage{}
 			err = json.Unmarshal(message.Data, cm)
 			if err != nil {
-				fmt.Println("Error during unmarshalling")
+				fmt.Fprintln(File, "Error during unmarshalling")
 				continue
 			}
+			fmt.Println("Just unmarshalled ", *cm, message.Data)
 			gr.Inbound <- *cm
+			fmt.Fprintln(File, "Just sent the incomming message onto the inbound channel to ui")
 		}
 	}
 }

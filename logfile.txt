@@ -1,0 +1,16 @@
+Successfully created a private key
+Successfully created a TLS transport
+Successfully created a multiaddrs
+Everything good till here
+Routing successfull
+Inside routing function
+Successfully setup kdht
+Successfully created a new node
+Successfully subscribed to  lobby
+Successfully subscribed to  Home
+Successfully initialized to Home group
+Error while trying to read a message from a subscription
+Successfully published the message
+Successfully read message from a subscription
+Successfully published the message
+Successfully read message from a subscription

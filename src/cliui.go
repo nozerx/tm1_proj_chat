@@ -53,7 +53,7 @@ func NewUI(gr *Group) *UI {
 
 func (ui *UI) Run() error {
 	go ui.starteventhandler()
-
+	go ui.InitializeGroup()
 	defer ui.Close()
 	return ui.app.Run()
 }
@@ -90,6 +90,24 @@ func (ui *UI) starteventhandler() {
 			return
 		}
 	}
+}
+
+func (ui *UI) InitializeGroup() {
+	oldGroup := ui.Group
+
+	newGroup, err := JoinGroup(ui.Host, "Home")
+	if err != nil {
+		fmt.Fprintln(File, "Error while initilalizing the group")
+	}
+	fmt.Fprintln(File, "Successfully initialized to Home group")
+	ui.announce_group("Initialized to home group")
+	ui.Group = newGroup
+	time.Sleep(5 * time.Second)
+	oldGroup.Exit()
+}
+func (ui *UI) announce_group(msg string) {
+	promt := fmt.Sprintln("[yellow]Announcement")
+	fmt.Fprintln(ui.messagebox, promt)
 }
 
 // A method of UI that displays a message recieved from a peer

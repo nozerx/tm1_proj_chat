@@ -3,6 +3,7 @@ package main
 import (
 	"documents/GitHub/tm1_proj_chat/src"
 	"fmt"
+	"time"
 )
 
 func main() {
@@ -14,13 +15,16 @@ func main() {
 	p2pHost.AdvertiseConnect()
 	fmt.Println(len(p2pHost.Host.Network().Peers()))
 	// fmt.Println(p2pHost.Host.Network().Peers())
-	chagrp, err := src.JoinGroup(p2pHost)
+	chagrp, err := src.JoinGroup(p2pHost, "lobby")
 	if err != nil {
-		fmt.Println("Error while creating a group")
+		fmt.Fprintln(src.File, "Error while creating a group")
 		panic(err)
 	}
+	time.Sleep(5 * time.Second)
 	fmt.Print(chagrp)
 	ui := src.NewUI(chagrp)
 	ui.Run()
+
+	defer src.File.Close()
 
 }
