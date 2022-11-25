@@ -17,7 +17,7 @@ type chatmessage struct {
 }
 
 type Group struct {
-	Host      *p2pHost
+	Host      *P2P
 	Inbound   chan chatmessage
 	Outbound  chan string
 	GroupName string
@@ -31,7 +31,7 @@ type Group struct {
 
 var File, _ = os.Create("logfile.txt")
 
-func JoinGroup(p2phost *p2pHost, topicName string) (*Group, error) {
+func JoinGroup(p2phost *P2P, topicName string) (*Group, error) {
 	topic, err := p2phost.PubSub.Join(topicName)
 	if err != nil {
 		fmt.Fprintln(File, "Error while join the chat")

@@ -1,0 +1,201 @@
+// package src
+
+// import (
+// 	"context"
+// 	"crypto/rand"
+// 	"fmt"
+// 	"sync"
+// 	"time"
+
+// 	"github.com/libp2p/go-libp2p"
+// 	"github.com/libp2p/go-libp2p-core/routing"
+// 	dht "github.com/libp2p/go-libp2p-kad-dht"
+// 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+// 	"github.com/libp2p/go-libp2p/core/crypto"
+// 	"github.com/libp2p/go-libp2p/core/host"
+// 	"github.com/libp2p/go-libp2p/core/peer"
+// 	discovery "github.com/libp2p/go-libp2p/p2p/discovery/routing"
+// 	"github.com/libp2p/go-libp2p/p2p/host/autorelay"
+// 	"github.com/libp2p/go-libp2p/p2p/muxer/yamux"
+// 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
+// 	tls "github.com/libp2p/go-libp2p/p2p/security/tls"
+// 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
+// 	"github.com/multiformats/go-multiaddr"
+// )
+
+// // const service = "rex/chat"
+
+// // type p2pHost struct {
+// // 	Ctx       context.Context
+// // 	Host      host.Host
+// // 	KaDHT     *dht.IpfsDHT
+// // 	Discovery *discovery.RoutingDiscovery
+// // 	PubSub    *pubsub.PubSub
+// // }
+
+// // func EstablishP2P() *p2pHost {
+// // 	ctx := context.Background()
+// // 	nodehost, kdht := creatNode(ctx)
+// // 	bootsrapDHT(ctx, nodehost, kdht)
+// // 	routingDiscovery := discovery.NewRoutingDiscovery(kdht)
+// // 	pubsubhand := setUpPubSub(ctx, nodehost, routingDiscovery)
+// // 	return &p2pHost{
+// // 		Ctx:       ctx,
+// // 		Host:      nodehost,
+// // 		KaDHT:     kdht,
+// // 		Discovery: routingDiscovery,
+// // 		PubSub:    pubsubhand,
+// // 	}
+// // }
+
+// func creatNode(ctx context.Context) (host.Host, *dht.IpfsDHT) {
+// 	prvkey, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, rand.Reader)
+// 	if err != nil {
+// 		fmt.Fprintln(File, "Error while generating the public & private key pair")
+// 		panic(err)
+// 	}
+// 	fmt.Fprintln(File, "Successfully created a key pair")
+// 	identity := libp2p.Identity(prvkey)
+// 	tlstransport, err := tls.New(prvkey)
+// 	if err != nil {
+// 		fmt.Fprintln(File, "Error while creating a TLS transport for a secure session")
+// 		panic(err)
+// 	}
+// 	fmt.Fprintln(File, "Successfully created a TLS transport for a  secure session")
+// 	security := libp2p.Security(tls.ID, tlstransport)
+// 	// needs to understand this part better
+// 	transport := libp2p.Transport(tcp.NewTCPTransport)
+// 	muladdr, err := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/0")
+// 	listen := libp2p.ListenAddrs(muladdr)
+// 	if err != nil {
+// 		fmt.Fprintln(File, "Error while creating the new multiaddr")
+// 		panic(err)
+// 	}
+// 	fmt.Fprintln(File, "Successfully created a multiaddrs and a Listener configuration on the multiaddress")
+// 	muxer := libp2p.Muxer("/yamux/1.0.0", yamux.DefaultTransport)
+// 	connMgr, err := connmgr.NewConnManager(100, 400)
+// 	conn := libp2p.ConnectionManager(connMgr)
+// 	nat := libp2p.NATPortMap()
+// 	fmt.Fprintln(File, "Everything good till here")
+// 	relay := libp2p.EnableAutoRelay(autorelay.WithDefaultStaticRelays(), autorelay.WithNumRelays(10))
+// 	var kdht *dht.IpfsDHT
+// 	routing := libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
+// 		fmt.Fprintln(File, "Inside routing function")
+// 		kdht = setupKadDHT(ctx, h)
+// 		fmt.Fprintln(File, "Successfully setup kdht")
+// 		return kdht, err
+// 	})
+// 	fmt.Fprintln(File, "Routing successfull")
+// 	fmt.Println(relay)
+// 	opts := libp2p.ChainOptions(identity, listen, security, transport, muxer, conn, nat, routing, relay)
+// 	fmt.Println("Successfully setup chain options")
+// 	libhost, err := libp2p.New(opts)
+// 	if err != nil {
+// 		fmt.Fprintln(File, "Error while creating a new node")
+// 		panic(err)
+// 	}
+// 	fmt.Fprintln(File, "The nodes peer id is :", kdht.PeerID())
+
+// 	fmt.Fprintln(File, "Successfully created a new node")
+// 	return libhost, kdht
+
+// }
+
+// func (p2p *p2pHost) AdvertiseConnect() {
+// 	tt1, err := p2p.Discovery.Advertise(p2p.Ctx, service)
+// 	if err != nil {
+// 		fmt.Println("Error while advertising the availability")
+// 		panic(err)
+// 	}
+// 	time.Sleep(5 * time.Second)
+// 	fmt.Println(File, "Starting the peer discovery")
+// 	peerChannel, err := p2p.Discovery.FindPeers(p2p.Ctx, service)
+// 	if err != nil {
+// 		fmt.Println("Error while finding service peers")
+// 	}
+// 	fmt.Println("Service time to live is", tt1)
+// 	fmt.Fprintln(File, "Connections active before connecting to sevice nodes", len(p2p.Host.Network().Peers()))
+// 	go handlePeerDiscovery(p2p.Host, peerChannel)
+// 	time.Sleep(1 * time.Minute)
+// }
+
+// func PrintAllActiveConnections(p2p *P2P) {
+// 	for i, peerConn := range p2p.Host.Network().Conns() {
+// 		fmt.Fprintln(File, i, peerConn)
+// 	}
+// }
+
+// func handlePeerDiscovery(nodehost host.Host, peerchan <-chan peer.AddrInfo) {
+// 	for peer := range peerchan {
+// 		if peer.ID == nodehost.ID() {
+// 			continue
+// 		}
+// 		if err := nodehost.Connect(context.Background(), peer); err != nil {
+// 			fmt.Fprintln(File, "Connection to node", peer.Addrs, "not established", "reason:", err.Error())
+// 		} else {
+// 			fmt.Fprintln(File, "connection to node", peer.Addrs, "is successfully established")
+// 		}
+// 	}
+// 	fmt.Fprintln(File, "connection to service nodes done")
+// }
+
+// func setupKadDHT(ctx context.Context, nodehost host.Host) *dht.IpfsDHT {
+// 	dhtmode := dht.Mode(dht.ModeServer)
+// 	bootsrappeers := dht.GetDefaultBootstrapPeerAddrInfos()
+// 	for _, bootp := range bootsrappeers {
+// 		fmt.Fprintln(File, "The address of these peers are :", bootp.Addrs)
+// 	}
+
+// 	dhtpeers := dht.BootstrapPeers(bootsrappeers...)
+
+// 	kdht, err := dht.New(ctx, nodehost, dhtmode, dhtpeers)
+// 	// needs to understand how this part works
+// 	if err != nil {
+// 		fmt.Fprintln(File, "Error while creating a new DHT")
+// 		panic(err)
+// 	}
+// 	return kdht
+
+// }
+
+// func bootsrapDHT(ctx context.Context, nodehost host.Host, kdht *dht.IpfsDHT) {
+// 	if err := kdht.Bootstrap(ctx); err != nil {
+// 		fmt.Println("Error while bootstraping DHT")
+// 		panic(err)
+// 	}
+
+// 	var wg sync.WaitGroup
+// 	var connectedBootpeers int
+// 	var totalbootpeers int
+// 	for _, peeraddr := range dht.DefaultBootstrapPeers {
+// 		peerInfor, _ := peer.AddrInfoFromP2pAddr(peeraddr)
+// 		wg.Add(1)
+// 		go func() {
+// 			defer wg.Done()
+// 			if err := nodehost.Connect(ctx, *peerInfor); err != nil {
+// 				totalbootpeers++
+// 			} else {
+// 				connectedBootpeers++
+// 				totalbootpeers++
+// 			}
+// 		}()
+// 	}
+// 	wg.Wait()
+// 	fmt.Fprintln(File, "Connected to ", connectedBootpeers, "of ", totalbootpeers)
+
+// }
+
+// func setUpPubSub(ctx context.Context, nodehost host.Host, routingDiscovery *discovery.RoutingDiscovery) *pubsub.PubSub {
+// 	pubsubHandler, err := pubsub.NewGossipSub(ctx, nodehost, pubsub.WithDiscovery(routingDiscovery))
+// 	if err != nil {
+// 		fmt.Println("Error while creating a pubsub service")
+// 		panic(err)
+// 	}
+// 	fmt.Fprintln(File, "Successfully established a pubsub service")
+// 	return pubsubHandler
+// }
+
+// func (gr *Group) PeerList() []peer.ID {
+// 	// fmt.Fprintln(File, len(gr.Host.Host.Network().LocalPeer()))
+// 	return gr.pstopic.ListPeers()
+// }
